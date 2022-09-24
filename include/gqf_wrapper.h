@@ -12,7 +12,6 @@
 
 #include "gqf.h"
 #include "gqf_int.h"
-#include "gqf_file.h"
 
 QF g_quotient_filter;
 QFi g_quotient_filter_itr;
@@ -26,7 +25,7 @@ extern inline int gqf_init(uint64_t nbits, uint64_t num_hash_bits)
 
 extern inline int gqf_insert(__uint128_t val, uint64_t count)
 {
-	qf_insert(&g_quotient_filter, val, 0, count, QF_NO_LOCK);
+	qf_insert(&g_quotient_filter, val, 0, count, 0);
 	return 0;
 }
 

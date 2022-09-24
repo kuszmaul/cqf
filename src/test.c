@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 
 	/* Insert keys in the CQF */
 	for (uint64_t i = 0; i < nvals; i++) {
-		int ret = qf_insert(&qf, vals[i], 0, key_count, QF_NO_LOCK);
+		int ret = qf_insert(&qf, vals[i], 0, key_count, 0);
 		if (ret < 0) {
 			fprintf(stderr, "failed insertion for key: %lx %d.\n", vals[i], 50);
 			if (ret == QF_NO_SPACE)
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
 							key, idx);
 			abort();
 		}
-		qf_insert(&unique_idx, key, 0, 1, QF_NO_LOCK);
+		qf_insert(&unique_idx, key, 0, 1, 0);
 		int64_t newindex = qf_get_unique_index(&unique_idx, key, 0, 0);
 		if (idx < newindex) {
 			fprintf(stderr, "Index weirdness: index %dth key %ld was at %ld, is now at %ld\n",
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
 		/*count);*/
 		/*abort();*/
 		/*}*/
-		int ret = qf_delete_key_value(&qf, vals[i], 0, QF_NO_LOCK);
+		int ret = qf_delete_key_value(&qf, vals[i], 0, 0);
 		count = qf_count_key_value(&qf, vals[i], 0, 0);
 		if (count > 0) {
 			if (ret < 0) {

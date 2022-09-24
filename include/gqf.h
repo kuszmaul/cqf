@@ -46,24 +46,8 @@ extern "C" {
 		QF_HASH_NONE
 	};
 
-	/* The CQF supports concurrent insertions and queries.  Only the
-		 portion of the CQF being examined or modified is locked, so it
-		 supports high throughput even with many threads.
-
-		 The CQF operations support 3 locking modes:
-
-		 - NO_LOCK: for single-threaded applications or applications
-       that do their own concurrency management.
-
-		 - WAIT_FOR_LOCK: Spin until you get the lock, then do the query
-       or update.
-
-		 - TRY_ONCE_LOCK: If you can't grab the lock on the first try,
-       return with an error code.
-	*/
-#define QF_NO_LOCK (0x01)
-#define QF_TRY_ONCE_LOCK (0x02)
-#define QF_WAIT_FOR_LOCK (0x04)
+        /* The CQF is thread compatible.  You can do concurrent reads but only one
+         * write at a time. */
 
 	/* It is sometimes useful to insert a key that has already been
 		 hashed. */
@@ -235,8 +219,6 @@ extern "C" {
 	/* Number of (distinct) key-value pairs. */
 	uint64_t qf_get_sum_of_counts(const QF *qf);
 	uint64_t qf_get_num_distinct_key_value_pairs(const QF *qf);
-
-	void qf_sync_counters(const QF *qf);
 
 	/****************************************
 		Iterators

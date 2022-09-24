@@ -1,4 +1,4 @@
-TARGETS=test test_threadsafe test_pc bm
+TARGETS=test bm
 
 ifdef D
 	DEBUG=-g
@@ -40,40 +40,23 @@ all: $(TARGETS)
 # dependencies between programs and .o files
 
 test:								$(OBJDIR)/test.o $(OBJDIR)/gqf.o \
-										$(OBJDIR)/hashutil.o \
-										$(OBJDIR)/partitioned_counter.o
-
-test_threadsafe:		$(OBJDIR)/test_threadsafe.o $(OBJDIR)/gqf.o \
-										$(OBJDIR)/hashutil.o \
-										$(OBJDIR)/partitioned_counter.o
-
-test_pc:						$(OBJDIR)/test_partitioned_counter.o $(OBJDIR)/gqf.o \
-										$(OBJDIR)/hashutil.o \
-										$(OBJDIR)/partitioned_counter.o
+										$(OBJDIR)/hashutil.o
 
 bm:									$(OBJDIR)/bm.o $(OBJDIR)/gqf.o \
-										$(OBJDIR)/zipf.o $(OBJDIR)/hashutil.o \
-										$(OBJDIR)/partitioned_counter.o
+										$(OBJDIR)/zipf.o $(OBJDIR)/hashutil.o
 
 # dependencies between .o files and .h files
 
 $(OBJDIR)/test.o: 						$(LOC_INCLUDE)/gqf.h \
-															$(LOC_INCLUDE)/hashutil.h \
-															$(LOC_INCLUDE)/partitioned_counter.h
+															$(LOC_INCLUDE)/hashutil.h
 
-$(OBJDIR)/test_threadsafe.o: 	$(LOC_INCLUDE)/gqf.h \
-															$(LOC_INCLUDE)/hashutil.h \
-															$(LOC_INCLUDE)/partitioned_counter.h
-
-$(OBJDIR)/bm.o:								$(LOC_INCLUDE)/gqf_wrapper.h \
-															$(LOC_INCLUDE)/partitioned_counter.h
+$(OBJDIR)/bm.o:								$(LOC_INCLUDE)/gqf_wrapper.h
 
 
 # dependencies between .o files and .cc (or .c) files
 
 $(OBJDIR)/gqf.o:							$(LOC_SRC)/gqf.c $(LOC_INCLUDE)/gqf.h
 $(OBJDIR)/hashutil.o:					$(LOC_SRC)/hashutil.c $(LOC_INCLUDE)/hashutil.h
-$(OBJDIR)/partitioned_counter.o:	$(LOC_INCLUDE)/partitioned_counter.h
 
 #
 # generic build rules
