@@ -19,9 +19,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "hashutil.h"
-#include "gqf.h"
-#include "gqf_int.h"
+#include "experimental/users/bradleybear/cqf/include/hashutil.h"
+#include "experimental/users/bradleybear/cqf/include/gqf.h"
+#include "experimental/users/bradleybear/cqf/include/gqf_int.h"
 
 /******************************************************************
  * Code for managing the metadata bits and slots w/o interpreting *
@@ -310,16 +310,21 @@ static inline void set_slot(const QF *qf, uint64_t index, uint64_t value)
 
 static inline uint64_t get_slot(const QF *qf, uint64_t index)
 {
-	assert(index < qf->metadata->xnslots);
-	/* Should use __uint128_t to support up to 64-bit remainders, but gcc seems
-	 * to generate buggy code.  :/  */
-	uint64_t *p = (uint64_t *)&get_block(qf, index /
-																			 QF_SLOTS_PER_BLOCK)->slots[(index %
-																																QF_SLOTS_PER_BLOCK)
-																			 * qf->metadata->bits_per_slot / 8];
-	return (uint64_t)(((*p) >> (((index % QF_SLOTS_PER_BLOCK) *
-															 qf->metadata->bits_per_slot) % 8)) &
-										BITMASK(qf->metadata->bits_per_slot));
+  fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+  assert(index < qf->metadata->xnslots);
+  /* Should use __uint128_t to support up to 64-bit remainders, but gcc seems
+   * to generate buggy code.  :/  */
+  fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+  uint64_t *p = (uint64_t *)&get_block(qf, index /
+                                       QF_SLOTS_PER_BLOCK)->slots[(index %
+                                                                   QF_SLOTS_PER_BLOCK)
+                                                                  * qf->metadata->bits_per_slot / 8];
+  fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+  fprintf(stderr, "p=%p\n", p);
+  fprintf(stderr, "*p=%lu\n", *p);
+  return (uint64_t)(((*p) >> (((index % QF_SLOTS_PER_BLOCK) *
+                               qf->metadata->bits_per_slot) % 8)) &
+                    BITMASK(qf->metadata->bits_per_slot));
 }
 
 static inline void set_slot(const QF *qf, uint64_t index, uint64_t value)
@@ -890,73 +895,79 @@ REQUIRES: index points to first slot of a counter. */
 static inline uint64_t decode_counter(const QF *qf, uint64_t index, uint64_t
 																			*remainder, uint64_t *count)
 {
-	uint64_t base;
-	uint64_t rem;
-	uint64_t cnt;
-	uint64_t digit;
-	uint64_t end;
+  fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+  uint64_t base;
+  uint64_t rem;
+  uint64_t cnt;
+  uint64_t digit;
+  uint64_t end;
 
-	*remainder = rem = get_slot(qf, index);
+  fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+  *remainder = rem = get_slot(qf, index);
 
-	if (is_runend(qf, index)) { /* Entire run is "0" */
-		*count = 1; 
-		return index;
-	}
+  fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+  if (is_runend(qf, index)) { /* Entire run is "0" */
+    *count = 1; 
+    return index;
+  }
 
-	digit = get_slot(qf, index + 1);
+  fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+  digit = get_slot(qf, index + 1);
 
-	if (is_runend(qf, index + 1)) {
-		*count = digit == rem ? 2 : 1;
-		return index + (digit == rem ? 1 : 0);
-	}
+  if (is_runend(qf, index + 1)) {
+    *count = digit == rem ? 2 : 1;
+    return index + (digit == rem ? 1 : 0);
+  }
 
-	if (rem > 0 && digit >= rem) {
-		*count = digit == rem ? 2 : 1;
-		return index + (digit == rem ? 1 : 0);
-	}
+  fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+  if (rem > 0 && digit >= rem) {
+    *count = digit == rem ? 2 : 1;
+    return index + (digit == rem ? 1 : 0);
+  }
 
-	if (rem > 0 && digit == 0 && get_slot(qf, index + 2) == rem) {
-		*count = 3;
-		return index + 2;
-	}
+  if (rem > 0 && digit == 0 && get_slot(qf, index + 2) == rem) {
+    *count = 3;
+    return index + 2;
+  }
 
-	if (rem == 0 && digit == 0) {
-		if (get_slot(qf, index + 2) == 0) {
-			*count = 3;
-			return index + 2;
-		} else {
-			*count = 2;
-			return index + 1;
-		}
-	}
+  fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+  if (rem == 0 && digit == 0) {
+    if (get_slot(qf, index + 2) == 0) {
+      *count = 3;
+      return index + 2;
+    } else {
+      *count = 2;
+      return index + 1;
+    }
+  }
 
-	cnt = 0;
-	base = (1ULL << qf->metadata->bits_per_slot) - (rem ? 2 : 1);
+  cnt = 0;
+  base = (1ULL << qf->metadata->bits_per_slot) - (rem ? 2 : 1);
 
-	end = index + 1;
-	while (digit != rem && !is_runend(qf, end)) {
-		if (digit > rem)
-			digit--;
-		if (digit && rem)
-			digit--;
-		cnt = cnt * base + digit;
+  end = index + 1;
+  while (digit != rem && !is_runend(qf, end)) {
+    if (digit > rem)
+      digit--;
+    if (digit && rem)
+      digit--;
+    cnt = cnt * base + digit;
 
-		end++;
-		digit = get_slot(qf, end);
-	}
+    end++;
+    digit = get_slot(qf, end);
+  }
 
-	if (rem) {
-		*count = cnt + 3;
-		return end;
-	}
+  if (rem) {
+    *count = cnt + 3;
+    return end;
+  }
 
-	if (is_runend(qf, end) || get_slot(qf, end + 1) != 0) {
-		*count = 1;
-		return index;
-	}
+  if (is_runend(qf, end) || get_slot(qf, end + 1) != 0) {
+    *count = 1;
+    return index;
+  }
 
-	*count = cnt + 4;
-	return end + 1;
+  *count = cnt + 4;
+  return end + 1;
 }
 
 /* return the next slot which corresponds to a 
@@ -1218,6 +1229,7 @@ static inline int insert1(QF *qf, __uint128_t hash, uint8_t runtime_lock)
 static inline int insert(QF *qf, __uint128_t hash, uint64_t count, uint8_t
                          runtime_lock)
 {
+  fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
   int ret_distance = 0;
   uint64_t hash_remainder           = hash & BITMASK(qf->metadata->bits_per_slot);
   uint64_t hash_bucket_index        = hash >> qf->metadata->bits_per_slot;
@@ -1229,6 +1241,7 @@ static inline int insert(QF *qf, __uint128_t hash, uint64_t count, uint8_t
   /* Empty slot */
   if (might_be_empty(qf, hash_bucket_index) && runend_index ==
       hash_bucket_index) {
+    fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
     METADATA_WORD(qf, runends, hash_bucket_index) |= 1ULL <<
                                                      (hash_bucket_block_offset % 64);
     set_slot(qf, hash_bucket_index, hash_remainder);
@@ -1240,9 +1253,12 @@ static inline int insert(QF *qf, __uint128_t hash, uint64_t count, uint8_t
     ++qf->metadata->nelts;
     /* This trick will, I hope, keep the fast case fast. */
     if (count > 1) {
+      fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
       insert(qf, hash, count - 1, 0);
     }
+    fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
   } else { /* Non-empty slot */
+    fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
     uint64_t new_values[67];
     int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf,
                                                                   hash_bucket_index
@@ -1250,6 +1266,7 @@ static inline int insert(QF *qf, __uint128_t hash, uint64_t count, uint8_t
 
     bool ret;
     if (!is_occupied(qf, hash_bucket_index)) { /* Empty bucket, but its slot is occupied. */
+      fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
       uint64_t *p = encode_counter(qf, hash_remainder, count, &new_values[67]);
       ret = insert_replace_slots_and_shift_remainders_and_runends_and_offsets(qf, 
                                                                               0, 
@@ -1263,17 +1280,20 @@ static inline int insert(QF *qf, __uint128_t hash, uint64_t count, uint8_t
       ++qf->metadata->ndistinct_elts;
       ret_distance = runstart_index - hash_bucket_index;
     } else { /* Non-empty bucket */
-
+      fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
       uint64_t current_remainder, current_count, current_end;
 
       /* Find the counter for this remainder, if one exists. */
       current_end = decode_counter(qf, runstart_index, &current_remainder,
                                    &current_count);
+      fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
       while (current_remainder < hash_remainder && !is_runend(qf, current_end)) {
+        fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
         runstart_index = current_end + 1;
         current_end = decode_counter(qf, runstart_index, &current_remainder,
                                      &current_count);	
       }
+      fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
 
       /* If we reached the end of the run w/o finding a counter for this remainder,
          then append a counter for this remainder to the run. */
@@ -1321,6 +1341,7 @@ static inline int insert(QF *qf, __uint128_t hash, uint64_t count, uint8_t
         ret_distance = runstart_index - hash_bucket_index;
       }
     }
+    fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
     METADATA_WORD(qf, occupieds, hash_bucket_index) |= 1ULL << (hash_bucket_block_offset % 64);
 		
     qf->metadata->nelts += count;
@@ -1620,64 +1641,68 @@ void qf_set_auto_resize(QF* qf, bool enabled)
 int qf_insert(QF *qf, uint64_t key, uint64_t value, uint64_t count, uint8_t
 							flags)
 {
-	// We fill up the CQF up to 95% load factor.
-	// This is a very conservative check.
-	if (qf_get_num_occupied_slots(qf) >= qf->metadata->nslots * 0.95) {
-		if (qf->runtimedata->auto_resize) {
-			/*fprintf(stdout, "Resizing the CQF.\n");*/
-			if (qf->runtimedata->container_resize(qf, qf->metadata->nslots * 2) < 0)
-			{
-				fprintf(stderr, "Resizing the failed.\n");
-				return QF_NO_SPACE;
-			}
-		} else
-			return QF_NO_SPACE;
-	}
-	if (count == 0)
-		return 0;
+  fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+  // We fill up the CQF up to 95% load factor.
+  // This is a very conservative check.
+  if (qf_get_num_occupied_slots(qf) >= qf->metadata->nslots * 0.95) {
+    if (qf->runtimedata->auto_resize) {
+      /*fprintf(stdout, "Resizing the CQF.\n");*/
+      if (qf->runtimedata->container_resize(qf, qf->metadata->nslots * 2) < 0)
+      {
+        fprintf(stderr, "Resizing the failed.\n");
+        return QF_NO_SPACE;
+      }
+    } else
+      return QF_NO_SPACE;
+  }
+  if (count == 0)
+    return 0;
 
-	if (GET_KEY_HASH(flags) != QF_KEY_IS_HASH) {
-		if (qf->metadata->hash_mode == QF_HASH_DEFAULT)
-			key = MurmurHash64A(((void *)&key), sizeof(key),
-													qf->metadata->seed) % qf->metadata->range;
-		else if (qf->metadata->hash_mode == QF_HASH_INVERTIBLE)
-			key = hash_64(key, BITMASK(qf->metadata->key_bits));
-	}
-	uint64_t hash = (key << qf->metadata->value_bits) | (value &
-																											 BITMASK(qf->metadata->value_bits));
-	int ret;
-	if (count == 1)
-		ret = insert1(qf, hash, flags);
-	else
-		ret = insert(qf, hash, count, flags);
+  if (GET_KEY_HASH(flags) != QF_KEY_IS_HASH) {
+    if (qf->metadata->hash_mode == QF_HASH_DEFAULT)
+      key = MurmurHash64A(((void *)&key), sizeof(key),
+                          qf->metadata->seed) % qf->metadata->range;
+    else if (qf->metadata->hash_mode == QF_HASH_INVERTIBLE)
+      key = hash_64(key, BITMASK(qf->metadata->key_bits));
+  }
+  uint64_t hash = (key << qf->metadata->value_bits) | (value &
+                                                       BITMASK(qf->metadata->value_bits));
+  int ret;
+  if (count == 1)
+    ret = insert1(qf, hash, flags);
+  else
+    ret = insert(qf, hash, count, flags);
 
-	// check for fullness based on the distance from the home slot to the slot
-	// in which the key is inserted
-	if (ret == QF_NO_SPACE || ret > DISTANCE_FROM_HOME_SLOT_CUTOFF) {
-		float load_factor = qf_get_num_occupied_slots(qf) /
+  // check for fullness based on the distance from the home slot to the slot
+  // in which the key is inserted
+  if (ret == QF_NO_SPACE || ret > DISTANCE_FROM_HOME_SLOT_CUTOFF) {
+    float load_factor = qf_get_num_occupied_slots(qf) /
 			(float)qf->metadata->nslots;
-		fprintf(stdout, "Load factor: %lf\n", load_factor);
-		if (qf->runtimedata->auto_resize) {
-			fprintf(stdout, "Resizing the CQF.\n");
-			if (qf->runtimedata->container_resize(qf, qf->metadata->nslots * 2) > 0)
-			{
-				if (ret == QF_NO_SPACE) {
-					if (count == 1)
-						ret = insert1(qf, hash, flags);
-					else
-						ret = insert(qf, hash, count, flags);
-				}
-				fprintf(stderr, "Resize finished.\n");
-			} else {
-				fprintf(stderr, "Resize failed\n");
-				ret = QF_NO_SPACE;
-			}
-		} else {
-			fprintf(stderr, "The CQF is filling up.\n");
-			ret = QF_NO_SPACE;
-		}
-	}
-	return ret;
+    fprintf(stdout, "Load factor: %lf\n", load_factor);
+    if (qf->runtimedata->auto_resize) {
+      fprintf(stdout, "Resizing the CQF.\n");
+      fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+      fprintf(stderr, "contianer_resize=%p\n", qf->runtimedata->container_resize);
+      if (qf->runtimedata->container_resize(qf, qf->metadata->nslots * 2) > 0)
+      {
+        fprintf(stderr, "Here I am: %s:%d\n", __FILE__, __LINE__);
+        if (ret == QF_NO_SPACE) {
+          if (count == 1)
+            ret = insert1(qf, hash, flags);
+          else
+            ret = insert(qf, hash, count, flags);
+        }
+        fprintf(stderr, "Resize finished.\n");
+      } else {
+        fprintf(stderr, "Resize failed\n");
+        ret = QF_NO_SPACE;
+      }
+    } else {
+      fprintf(stderr, "The CQF is filling up.\n");
+      ret = QF_NO_SPACE;
+    }
+  }
+  return ret;
 }
 
 int qf_set_count(QF *qf, uint64_t key, uint64_t value, uint64_t count, uint8_t
@@ -2190,69 +2215,73 @@ void qf_merge(const QF *qfa, const QF *qfb, QF *qfc)
  */
 void qf_multi_merge(const QF *qf_arr[], int nqf, QF *qfr)
 {
-	int i;
-	QFi qfi_arr[nqf];
-	int smallest_idx = 0;
-	uint64_t smallest_key = UINT64_MAX;
-	for (i=0; i<nqf; i++) {
-		if (qf_arr[i]->metadata->hash_mode != qfr->metadata->hash_mode &&
-				qf_arr[i]->metadata->seed != qfr->metadata->seed) {
-			fprintf(stderr, "Output QF and input QFs do not have the same hash mode or seed.\n");
-			exit(1);
-		}
-		qf_iterator_from_position(qf_arr[i], &qfi_arr[i], 0);
-	}
+  int i;
+  QFi *qfi_arr = malloc(nqf * sizeof(QFi));
+  int smallest_idx = 0;
+  uint64_t smallest_key = UINT64_MAX;
+  for (i=0; i<nqf; i++) {
+    if (qf_arr[i]->metadata->hash_mode != qfr->metadata->hash_mode &&
+        qf_arr[i]->metadata->seed != qfr->metadata->seed) {
+      fprintf(stderr, "Output QF and input QFs do not have the same hash mode or seed.\n");
+      exit(1);
+    }
+    qf_iterator_from_position(qf_arr[i], &qfi_arr[i], 0);
+  }
 
-	DEBUG_CQF("Merging %d CQFs\n", nqf);
-	for (i=0; i<nqf; i++) {
-		DEBUG_CQF("CQF %d\n", i);
-		DEBUG_DUMP(qf_arr[i]);
-	}
+  DEBUG_CQF("Merging %d CQFs\n", nqf);
+  for (i=0; i<nqf; i++) {
+    DEBUG_CQF("CQF %d\n", i);
+    DEBUG_DUMP(qf_arr[i]);
+  }
 
-	while (nqf > 1) {
-		uint64_t keys[nqf];
-		uint64_t values[nqf];
-		uint64_t counts[nqf];
-		for (i=0; i<nqf; i++)
-			qfi_get_hash(&qfi_arr[i], &keys[i], &values[i], &counts[i]);
+  uint64_t* keys = malloc(nqf * sizeof(uint64_t));
+  uint64_t* values = malloc(nqf * sizeof(uint64_t));
+  uint64_t* counts = malloc(nqf * sizeof(uint64_t));
+  while (nqf > 1) {
+    for (i=0; i<nqf; i++)
+      qfi_get_hash(&qfi_arr[i], &keys[i], &values[i], &counts[i]);
 		
-		do {
-			smallest_key = UINT64_MAX;
-			for (i=0; i<nqf; i++) {
-				if (keys[i] < smallest_key) {
-					smallest_key = keys[i]; smallest_idx = i;
-				}
-			}
-			qf_insert(qfr, keys[smallest_idx], values[smallest_idx],
-								counts[smallest_idx], QF_KEY_IS_HASH);
-			qfi_next(&qfi_arr[smallest_idx]);
-			qfi_get_hash(&qfi_arr[smallest_idx], &keys[smallest_idx],
-									 &values[smallest_idx],
-							&counts[smallest_idx]);
-		} while(!qfi_end(&qfi_arr[smallest_idx]));
+    do {
+      smallest_key = UINT64_MAX;
+      for (i=0; i<nqf; i++) {
+        if (keys[i] < smallest_key) {
+          smallest_key = keys[i]; smallest_idx = i;
+        }
+      }
+      qf_insert(qfr, keys[smallest_idx], values[smallest_idx],
+                counts[smallest_idx], QF_KEY_IS_HASH);
+      qfi_next(&qfi_arr[smallest_idx]);
+      qfi_get_hash(&qfi_arr[smallest_idx], &keys[smallest_idx],
+                   &values[smallest_idx],
+                   &counts[smallest_idx]);
+    } while(!qfi_end(&qfi_arr[smallest_idx]));
 
-		/* remove the qf that is exhausted from the array */
-		if (smallest_idx < nqf-1)
-			memmove(&qfi_arr[smallest_idx], &qfi_arr[smallest_idx+1],
-							(nqf-smallest_idx-1)*sizeof(qfi_arr[0]));
-		nqf--;
-	}
-	if (!qfi_end(&qfi_arr[0])) {
-		uint64_t iters = 0;
-		do {
-			uint64_t key, value, count;
-			qfi_get_hash(&qfi_arr[0], &key, &value, &count);
-			qf_insert(qfr, key, value, count, QF_KEY_IS_HASH);
-			qfi_next(&qfi_arr[0]);
-			iters++;
-		} while(!qfi_end(&qfi_arr[0]));
-		DEBUG_CQF("Num of iterations: %lu\n", iters);
-	}
+    /* remove the qf that is exhausted from the array */
+    if (smallest_idx < nqf-1)
+      memmove(&qfi_arr[smallest_idx], &qfi_arr[smallest_idx+1],
+              (nqf-smallest_idx-1)*sizeof(qfi_arr[0]));
+    nqf--;
+  }
+  free(keys);
+  free(values);
+  free(counts);
+  if (!qfi_end(&qfi_arr[0])) {
+    uint64_t iters = 0;
+    do {
+      uint64_t key, value, count;
+      qfi_get_hash(&qfi_arr[0], &key, &value, &count);
+      qf_insert(qfr, key, value, count, QF_KEY_IS_HASH);
+      qfi_next(&qfi_arr[0]);
+      iters++;
+    } while(!qfi_end(&qfi_arr[0]));
+    DEBUG_CQF("Num of iterations: %lu\n", iters);
+  }
 
-	DEBUG_CQF("%s", "Final CQF after merging.\n");
-	DEBUG_DUMP(qfr);
+  DEBUG_CQF("%s", "Final CQF after merging.\n");
+  DEBUG_DUMP(qfr);
 
-	return;
+  free(qfi_arr);
+  return;
 }
 
 /* find cosine similarity between two QFs. */

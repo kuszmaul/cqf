@@ -224,8 +224,7 @@ extern "C" {
 		Iterators
 	*****************************************/
 	
-	typedef struct quotient_filter_iterator quotient_filter_iterator;
-	typedef quotient_filter_iterator QFi;
+	typedef struct quotient_filter_iterator QFi;
 
 #define QF_INVALID (-4)
 #define QFI_INVALID (-5)
